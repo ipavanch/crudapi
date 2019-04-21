@@ -45,12 +45,12 @@ class VaultDAO extends VaultColumns with CRUD {
     Fragment.const(query).update
   }
 
-  def read(ns: String): query.Query0[VaultDTO] = {
+  def read(ns: String, usr: String): query.Query0[VaultDTO] = {
     Fragment.const(
       s"""
          |SELECT $namespace, $user, $dbType, $jdbcURL, $jdbcUser, $jdbcPass
          |FROM $table
-         |WHERE $namespace = '$ns';
+         |WHERE $namespace = '${ns.trim}' AND $user = '${usr.trim}' ;
        """.stripMargin
     ).query[VaultDTO]
   }

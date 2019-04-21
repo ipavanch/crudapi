@@ -12,6 +12,8 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.{Operation, Parameter}
 import javax.ws.rs.{DELETE, POST, PUT, Path}
+import com.mansoor.rest.crudapi.`X-Requested-By`
+import com.mansoor.rest.crudapi.server.backend.db.dto.UsageLogDTO
 
 @Path("/sql/{vaultNamespace}")
 case object SqlSubmit extends Directives with JsonSupport {
@@ -39,17 +41,34 @@ case object SqlSubmit extends Directives with JsonSupport {
     responses = Array(
       new ApiResponse(responseCode = "200", description = "Records inserted successfully into table {table} !"),
       new ApiResponse(responseCode = "400", description = """{ "rejection" : "Request is missing required HTTP header 'X-Requested-By'", "refer": "Swagger API on /swagger endpoint for usage of routes!"}"""),
-      new ApiResponse(responseCode = "404", description = "Namespace {vaultNamespace} not found in {vault} table!"),
+      new ApiResponse(responseCode = "409", description = "{exception}"),
       new ApiResponse(responseCode = "500", description = "Internal Server Error")
     ),
     tags = Array("SQL Insert")
   )
   def insertRoute: Route = path("sql" / Segment) { namespace =>
     post {
-      entity(as[SqlInsertJson]) { sql =>
-        onComplete(Operations.insertSql(namespace.trim, sql)) {
-          case Success(v) => complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(s"Records inserted successfully into table ${sql.table} !")))
-          case Failure(ex) => complete(HttpResponse(StatusCodes.Conflict, entity = HttpEntity(ex.toString)))
+      headerValueByName(`X-Requested-By`) { user =>
+        entity(as[SqlInsertJson]) { sql =>
+          val udto: UsageLogDTO = UsageLogDTO(
+            vaultNs = namespace,
+            vaultUsr = user,
+            runMode = "sql",
+            operation = "insert",
+            entity = sql.table,
+            status = false,
+            msg = ""
+          )
+          onComplete(Operations.insertSql(namespace, user, sql)) {
+            case Success(v) =>
+              val message: String = s"Records inserted successfully into table ${sql.table} !"
+              Operations.logUsage(udto.copy(status = true, msg = message))
+              complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(message)))
+            case Failure(ex) =>
+              val message: String = ex.toString
+              Operations.logUsage(udto.copy(status = false, msg = message))
+              complete(HttpResponse(StatusCodes.Conflict, entity = HttpEntity(message)))
+          }
         }
       }
     }
@@ -79,17 +98,34 @@ case object SqlSubmit extends Directives with JsonSupport {
     responses = Array(
       new ApiResponse(responseCode = "200", description = "Records updated successfully in table {table} !"),
       new ApiResponse(responseCode = "400", description = """{ "rejection" : "Request is missing required HTTP header 'X-Requested-By'", "refer": "Swagger API on /swagger endpoint for usage of routes!"}"""),
-      new ApiResponse(responseCode = "404", description = "Namespace {vaultNamespace} not found in {vault} table!"),
+      new ApiResponse(responseCode = "409", description = "{exception}"),
       new ApiResponse(responseCode = "500", description = "Internal Server Error")
     ),
     tags = Array("SQL Update")
   )
   def updateRoute: Route = path("sql" / Segment) { namespace =>
     put {
-      entity(as[SqlUpdateJson]) { sql =>
-        onComplete(Operations.updateSql(namespace.trim, sql)) {
-          case Success(v) => complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(s"Records inserted successfully into table ${sql.table} !")))
-          case Failure(ex) => complete(HttpResponse(StatusCodes.Conflict, entity = HttpEntity(ex.toString)))
+      headerValueByName(`X-Requested-By`) { user =>
+        entity(as[SqlUpdateJson]) { sql =>
+          val udto: UsageLogDTO = UsageLogDTO(
+            vaultNs = namespace,
+            vaultUsr = user,
+            runMode = "sql",
+            operation = "update",
+            entity = sql.table,
+            status = false,
+            msg = ""
+          )
+          onComplete(Operations.updateSql(namespace, user, sql)) {
+            case Success(v) =>
+              val message: String = s"Records updated successfully in table ${sql.table} !"
+              Operations.logUsage(udto.copy(status = true, msg = message))
+              complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(message)))
+            case Failure(ex) =>
+              val message: String = ex.toString
+              Operations.logUsage(udto.copy(status = false, msg = message))
+              complete(HttpResponse(StatusCodes.Conflict, entity = HttpEntity(message)))
+          }
         }
       }
     }
@@ -119,17 +155,34 @@ case object SqlSubmit extends Directives with JsonSupport {
     responses = Array(
       new ApiResponse(responseCode = "200", description = "Records deleted successfully on table {table} where {where} !"),
       new ApiResponse(responseCode = "400", description = """{ "rejection" : "Request is missing required HTTP header 'X-Requested-By'", "refer": "Swagger API on /swagger endpoint for usage of routes!"}"""),
-      new ApiResponse(responseCode = "404", description = "Namespace {vaultNamespace} not found in {vault} table!"),
+      new ApiResponse(responseCode = "409", description = "{exception}"),
       new ApiResponse(responseCode = "500", description = "Internal Server Error")
     ),
     tags = Array("SQL Delete")
   )
   def deleteRoute: Route = path("sql" / Segment) { namespace =>
     delete {
-      entity(as[SqlDeleteJson]) { sql =>
-        onComplete(Operations.deleteSql(namespace.trim, sql)) {
-          case Success(v) => complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(s"Records deleted successfully on table ${sql.table} where ${sql.where} !")))
-          case Failure(ex) => complete(HttpResponse(StatusCodes.Conflict, entity = HttpEntity(ex.toString)))
+      headerValueByName(`X-Requested-By`) { user =>
+        entity(as[SqlDeleteJson]) { sql =>
+          val udto: UsageLogDTO = UsageLogDTO(
+            vaultNs = namespace,
+            vaultUsr = user,
+            runMode = "sql",
+            operation = "delete",
+            entity = sql.table,
+            status = false,
+            msg = ""
+          )
+          onComplete(Operations.deleteSql(namespace, user, sql)) {
+            case Success(v) =>
+              val message: String = s"Records deleted successfully on table ${sql.table} where ${sql.where} !"
+              Operations.logUsage(udto.copy(status = true, msg = message))
+              complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(message)))
+            case Failure(ex) =>
+              val message: String = ex.toString
+              Operations.logUsage(udto.copy(status = false, msg = message))
+              complete(HttpResponse(StatusCodes.Conflict, entity = HttpEntity(ex.toString)))
+          }
         }
       }
     }

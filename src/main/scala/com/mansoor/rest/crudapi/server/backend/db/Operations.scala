@@ -12,10 +12,11 @@ import doobie.util.transactor.Transactor
 import doobie.implicits._
 import cats.effect.IO
 import com.mansoor.rest.crudapi.server.backend.db.dao.{UsageLogDAO, VaultDAO}
-import com.mansoor.rest.crudapi.server.backend.db.dto.VaultDTO
+import com.mansoor.rest.crudapi.server.backend.db.dto.{UsageLogDTO, VaultDTO}
 import com.mansoor.rest.crudapi.server.paths.payload.{SqlDeleteJson, SqlInsertJson, SqlUpdateJson}
 import doobie.util.update.Update0
 import doobie.util.yolo.Yolo
+
 import scala.concurrent.{ExecutionContext, Future}
 
 object Operations extends RowOps {
@@ -61,8 +62,14 @@ object Operations extends RowOps {
     }
   }
 
-  def insertSql(ns: String, sqlJson: SqlInsertJson): Future[List[Unit]] = {
-    val vRec: Option[VaultDTO] = getVaultRec(ns)
+  def logUsage(u: UsageLogDTO): Unit = {
+    val y: Yolo[IO] = xa.yolo
+    import y._
+    usageLogDAO.insert(u).quick.attempt.unsafeRunAsyncAndForget()
+  }
+
+  def insertSql(ns: String, user: String, sqlJson: SqlInsertJson): Future[List[Unit]] = {
+    val vRec: Option[VaultDTO] = getVaultRec(ns, user)
     if(vRec.isDefined) {
       val dbConf: DBConfig = transform2DBConf(vRec.get, sqlJson.schema)
       val clientXA: Transactor[IO] = Connector.get(dbConf)
@@ -70,12 +77,12 @@ object Operations extends RowOps {
       import yolo._
       Future.sequence(sqlJson.rows.map(i => insertRow(sqlJson.schema.trim, sqlJson.table.trim, i).quick.unsafeToFuture()))
     }else {
-      Future.failed[List[Unit]](new IllegalArgumentException(s"Namespace $ns not found in ${vaultDAO.table} table!"))
+      Future.failed[List[Unit]](new IllegalArgumentException(s"Namespace $ns and User $user combination not found in ${vaultDAO.table} table!"))
     }
   }
 
-  def updateSql(ns: String, sqlJson: SqlUpdateJson): Future[Unit] = {
-    val vRec: Option[VaultDTO] = getVaultRec(ns)
+  def updateSql(ns: String, user: String, sqlJson: SqlUpdateJson): Future[Unit] = {
+    val vRec: Option[VaultDTO] = getVaultRec(ns, user)
     if(vRec.isDefined) {
       val dbConf: DBConfig = transform2DBConf(vRec.get, sqlJson.schema)
       val clientXA: Transactor[IO] = Connector.get(dbConf)
@@ -83,12 +90,12 @@ object Operations extends RowOps {
       import yolo._
       updateRow(sqlJson.schema.trim, sqlJson.table.trim, sqlJson.set, sqlJson.where.trim).quick.unsafeToFuture()
     }else {
-      Future.failed[Unit](new IllegalArgumentException(s"Namespace $ns not found in ${vaultDAO.table} table!"))
+      Future.failed[Unit](new IllegalArgumentException(s"Namespace $ns and User $user combination not found in ${vaultDAO.table} table!"))
     }
   }
 
-  def deleteSql(ns: String, sqlJson: SqlDeleteJson): Future[Unit] = {
-    val vRec: Option[VaultDTO] = getVaultRec(ns)
+  def deleteSql(ns: String, user: String, sqlJson: SqlDeleteJson): Future[Unit] = {
+    val vRec: Option[VaultDTO] = getVaultRec(ns, user)
     if(vRec.isDefined) {
       val dbConf: DBConfig = transform2DBConf(vRec.get, sqlJson.schema)
       val clientXA: Transactor[IO] = Connector.get(dbConf)
@@ -96,7 +103,7 @@ object Operations extends RowOps {
       import yolo._
       deleteRow(sqlJson.schema.trim, sqlJson.table.trim, sqlJson.where.trim).quick.unsafeToFuture()
     }else {
-      Future.failed[Unit](new IllegalArgumentException(s"Namespace $ns not found in ${vaultDAO.table} table!"))
+      Future.failed[Unit](new IllegalArgumentException(s"Namespace $ns and User $user combination not found in ${vaultDAO.table} table!"))
     }
   }
 
@@ -127,12 +134,12 @@ object Operations extends RowOps {
     ).update
   }
 
-  private def getVaultRec(ns: String): Option[VaultDTO] = {
+  private def getVaultRec(ns: String, user: String): Option[VaultDTO] = {
     try {
-      Some(vaultDAO.read(ns).unique.transact(xa).unsafeRunSync())
+      Some(vaultDAO.read(ns, user).unique.transact(xa).unsafeRunSync())
     }catch {
       case ex: Throwable =>
-        log.error(s"Namespace $ns not found in ${vaultDAO.table} table!", ex)
+        log.error(s"Namespace $ns and User $user combination not found in ${vaultDAO.table} table!", ex)
         None
     }
   }

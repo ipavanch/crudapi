@@ -6,9 +6,10 @@ trait UsageLogColumns {
   val id: String = "id"
   val vaultNs: String = "v_namespace"
   val vaultUser: String = "v_usr"
-  val client: String = "client"
   val runMode: String = "run_mode"
   val operation: String = "operation"
   val entity: String = "entity"
+  val status: String = "status"
+  val msg: String = "msg"
   val entryTs: String = "entry_ts"
 }

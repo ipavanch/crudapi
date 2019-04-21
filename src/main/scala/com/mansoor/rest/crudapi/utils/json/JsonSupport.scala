@@ -1,7 +1,7 @@
 package com.mansoor.rest.crudapi.utils.json
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import com.mansoor.rest.crudapi.server.backend.db.dto.VaultDTO
+import com.mansoor.rest.crudapi.server.backend.db.dto.{UsageLogDTO, VaultDTO}
 import com.mansoor.rest.crudapi.server.paths.payload.{SqlDeleteJson, SqlInsertJson, SqlUpdateJson}
 import com.mansoor.rest.crudapi.utils.db.DBType
 import spray.json.{DefaultJsonProtocol, DeserializationException, JsString, JsValue, RootJsonFormat}
@@ -21,6 +21,7 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
 
   implicit val dbTypeEnum: EnumJsonConverter[DBType.type] = new EnumJsonConverter(DBType)
   implicit val vaultDTO: RootJsonFormat[VaultDTO] = jsonFormat6(VaultDTO)
+  implicit val usageLogDTO: RootJsonFormat[UsageLogDTO] = jsonFormat7(UsageLogDTO)
   implicit val sqlInsertJson: RootJsonFormat[SqlInsertJson] = jsonFormat4(SqlInsertJson)
   implicit val sqlUpdateJson: RootJsonFormat[SqlUpdateJson] = jsonFormat4(SqlUpdateJson)
   implicit val sqlDeleteJson: RootJsonFormat[SqlDeleteJson] = jsonFormat3(SqlDeleteJson)
