@@ -37,7 +37,7 @@ case object SqlSubmit extends Directives with JsonSupport {
       required = true
     ),
     responses = Array(
-      new ApiResponse(responseCode = "200", description = "Records inserted successfully into table {table}"),
+      new ApiResponse(responseCode = "200", description = "Records inserted successfully into table {table} !"),
       new ApiResponse(responseCode = "400", description = """{ "rejection" : "Request is missing required HTTP header 'X-Requested-By'", "refer": "Swagger API on /swagger endpoint for usage of routes!"}"""),
       new ApiResponse(responseCode = "404", description = "Namespace {vaultNamespace} not found in {vault} table!"),
       new ApiResponse(responseCode = "500", description = "Internal Server Error")
@@ -48,7 +48,7 @@ case object SqlSubmit extends Directives with JsonSupport {
     post {
       entity(as[SqlInsertJson]) { sql =>
         onComplete(Operations.insertSql(namespace.trim, sql)) {
-          case Success(v) => complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(s"Records inserted successfully into table ${sql.table}!")))
+          case Success(v) => complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(s"Records inserted successfully into table ${sql.table} !")))
           case Failure(ex) => complete(HttpResponse(StatusCodes.Conflict, entity = HttpEntity(ex.toString)))
         }
       }
@@ -77,7 +77,7 @@ case object SqlSubmit extends Directives with JsonSupport {
       required = true
     ),
     responses = Array(
-      new ApiResponse(responseCode = "200", description = "Records updated successfully in table {table}"),
+      new ApiResponse(responseCode = "200", description = "Records updated successfully in table {table} !"),
       new ApiResponse(responseCode = "400", description = """{ "rejection" : "Request is missing required HTTP header 'X-Requested-By'", "refer": "Swagger API on /swagger endpoint for usage of routes!"}"""),
       new ApiResponse(responseCode = "404", description = "Namespace {vaultNamespace} not found in {vault} table!"),
       new ApiResponse(responseCode = "500", description = "Internal Server Error")
@@ -88,7 +88,7 @@ case object SqlSubmit extends Directives with JsonSupport {
     put {
       entity(as[SqlUpdateJson]) { sql =>
         onComplete(Operations.updateSql(namespace.trim, sql)) {
-          case Success(v) => complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(s"Records inserted successfully into table ${sql.table}!")))
+          case Success(v) => complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(s"Records inserted successfully into table ${sql.table} !")))
           case Failure(ex) => complete(HttpResponse(StatusCodes.Conflict, entity = HttpEntity(ex.toString)))
         }
       }
@@ -117,7 +117,7 @@ case object SqlSubmit extends Directives with JsonSupport {
       required = true
     ),
     responses = Array(
-      new ApiResponse(responseCode = "200", description = "Record submission success for operation: {operation}"),
+      new ApiResponse(responseCode = "200", description = "Records deleted successfully on table {table} where {where} !"),
       new ApiResponse(responseCode = "400", description = """{ "rejection" : "Request is missing required HTTP header 'X-Requested-By'", "refer": "Swagger API on /swagger endpoint for usage of routes!"}"""),
       new ApiResponse(responseCode = "404", description = "Namespace {vaultNamespace} not found in {vault} table!"),
       new ApiResponse(responseCode = "500", description = "Internal Server Error")
@@ -127,7 +127,10 @@ case object SqlSubmit extends Directives with JsonSupport {
   def deleteRoute: Route = path("sql" / Segment) { namespace =>
     delete {
       entity(as[SqlDeleteJson]) { sql =>
-        Operations.deleteSql(namespace.trim, sql)
+        onComplete(Operations.deleteSql(namespace.trim, sql)) {
+          case Success(v) => complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(s"Records deleted successfully on table ${sql.table} where ${sql.where} !")))
+          case Failure(ex) => complete(HttpResponse(StatusCodes.Conflict, entity = HttpEntity(ex.toString)))
+        }
       }
     }
   }

@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.StandardRoute
 import akka.http.scaladsl.server.Directives.complete
 import cats.effect.ContextShift
 import com.mansoor.rest.crudapi.utils.config.ConfigLoader.DBConfig
-import com.mansoor.rest.crudapi.utils.db.{Connector, DBType, Driver}
+import com.mansoor.rest.crudapi.utils.db.{Connector, DBType, Driver, RowOps}
 import com.mansoor.rest.crudapi.{appConfig, ec, log}
 import doobie.util.fragment.Fragment
 import doobie.util.transactor.Transactor
@@ -18,7 +18,7 @@ import doobie.util.update.Update0
 import doobie.util.yolo.Yolo
 import scala.concurrent.{ExecutionContext, Future}
 
-object Operations {
+object Operations extends RowOps {
 
   private val backendDB: DBConfig = appConfig.backend.db
   private implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
@@ -81,22 +81,26 @@ object Operations {
       val clientXA: Transactor[IO] = Connector.get(dbConf)
       val yolo: Yolo[IO] = clientXA.yolo
       import yolo._
-      updateRow(sqlJson.schema.trim, sqlJson.table.trim, sqlJson.set, sqlJson.where).quick.unsafeToFuture()
+      updateRow(sqlJson.schema.trim, sqlJson.table.trim, sqlJson.set, sqlJson.where.trim).quick.unsafeToFuture()
     }else {
       Future.failed[Unit](new IllegalArgumentException(s"Namespace $ns not found in ${vaultDAO.table} table!"))
     }
   }
 
-  def deleteSql(ns: String, sqlJson: SqlDeleteJson): StandardRoute = {
+  def deleteSql(ns: String, sqlJson: SqlDeleteJson): Future[Unit] = {
     val vRec: Option[VaultDTO] = getVaultRec(ns)
     if(vRec.isDefined) {
-      complete(HttpResponse(StatusCodes.OK, entity = sqlJson.toString))
+      val dbConf: DBConfig = transform2DBConf(vRec.get, sqlJson.schema)
+      val clientXA: Transactor[IO] = Connector.get(dbConf)
+      val yolo: Yolo[IO] = clientXA.yolo
+      import yolo._
+      deleteRow(sqlJson.schema.trim, sqlJson.table.trim, sqlJson.where.trim).quick.unsafeToFuture()
     }else {
-      nsNotFound(ns)
+      Future.failed[Unit](new IllegalArgumentException(s"Namespace $ns not found in ${vaultDAO.table} table!"))
     }
   }
 
-  private def insertRow(schema: String, table: String, row: Map[String, String]): Update0 = {
+  override def insertRow(schema: String, table: String, row: Map[String, String]): Update0 = {
     Fragment.const(
       s"""
        |INSERT INTO $schema.$table (${row.keys.mkString(",")}) VALUES (${row.values.mkString(",")});
@@ -104,11 +108,20 @@ object Operations {
     ).update
   }
 
-  private def updateRow(schema: String, table: String, set: Map[String, String], where: String): Update0 = {
+  override def updateRow(schema: String, table: String, set: Map[String, String], where: String): Update0 = {
     Fragment.const(
       s"""
          |UPDATE $schema.$table
          |SET ${set.toList.map(i => s"${i._1}=${i._2}").mkString(",")}
+         |WHERE $where;
+     """.stripMargin
+    ).update
+  }
+
+  override def deleteRow(schema: String, table: String, where: String): Update0 = {
+    Fragment.const(
+      s"""
+         |DELETE FROM $schema.$table
          |WHERE $where;
      """.stripMargin
     ).update
@@ -122,10 +135,6 @@ object Operations {
         log.error(s"Namespace $ns not found in ${vaultDAO.table} table!", ex)
         None
     }
-  }
-
-  private def nsNotFound(ns: String): StandardRoute = {
-    complete(HttpResponse(StatusCodes.NotFound, entity = s"Namespace $ns not found in ${vaultDAO.table} table!"))
   }
 
   private def transform2DBConf(vRec: VaultDTO, db: String): DBConfig = {
