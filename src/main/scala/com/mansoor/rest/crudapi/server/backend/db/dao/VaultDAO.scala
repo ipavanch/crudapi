@@ -4,6 +4,7 @@ import com.mansoor.rest.crudapi.server.backend.db.dao.columns.VaultColumns
 import com.mansoor.rest.crudapi.utils.db.CRUD
 import com.mansoor.rest.crudapi.log
 import com.mansoor.rest.crudapi.server.backend.db.Tables
+import com.mansoor.rest.crudapi.server.backend.db.dto.VaultDTO
 import doobie.util.fragment.Fragment
 import doobie.util.update.Update0
 
@@ -27,6 +28,17 @@ class VaultDAO extends VaultColumns with CRUD {
      """.stripMargin
 
     log.info(query)
+
+    Fragment.const(query).update
+  }
+
+  override def insert(record: Any): Update0 = {
+    val rec: VaultDTO = record.asInstanceOf[VaultDTO]
+    val query: String =
+      s"""
+         |INSERT INTO $table ($namespace, $user, $dbType, $jdbcURL, $jdbcUser, $jdbcPass)
+         |VALUES ('${rec.namespace}', '${rec.user}', '${rec.dbType}', '${rec.jdbcURL}', '${rec.jdbcUser}', '${rec.jdbcPass}');
+       """.stripMargin
 
     Fragment.const(query).update
   }

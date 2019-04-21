@@ -2,7 +2,7 @@ package com.mansoor.rest.crudapi.server
 
 import com.github.swagger.akka.SwaggerHttpService
 import com.github.swagger.akka.model.{Contact, Info}
-import com.mansoor.rest.crudapi.server.paths.Base
+import com.mansoor.rest.crudapi.server.paths.{Base, RegisterVaultUser}
 import com.mansoor.rest.crudapi.{appConfig, hostname, port}
 
 case object SwaggerService extends SwaggerHttpService {
@@ -12,7 +12,8 @@ case object SwaggerService extends SwaggerHttpService {
   override val unwantedDefinitions: Seq[String] = Seq("Function1", "Function1RequestContextFutureRouteResult")
 
   override def apiClasses: Set[Class[_]] = Set(
-    Base.getClass
+    Base.getClass,
+    RegisterVaultUser.getClass
   )
 
   override def schemes: List[String] = List(appConfig.frontend.scheme)

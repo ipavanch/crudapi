@@ -30,4 +30,6 @@ class UsageLogDAO extends UsageLogColumns with CRUD {
 
     Fragment.const(query).update
   }
+
+  override def insert(record: Any): Update0 = ???
 }

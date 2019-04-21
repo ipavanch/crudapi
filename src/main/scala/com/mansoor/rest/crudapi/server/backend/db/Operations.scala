@@ -1,5 +1,7 @@
 package com.mansoor.rest.crudapi.server.backend.db
 
+import akka.http.scaladsl.model.{HttpEntity, HttpResponse, StatusCodes}
+import akka.http.scaladsl.server.StandardRoute
 import cats.effect.{ContextShift, IO}
 import com.mansoor.rest.crudapi.utils.config.ConfigLoader.DBConfig
 import com.mansoor.rest.crudapi.utils.db.Connector
@@ -9,6 +11,8 @@ import doobie.util.transactor.Transactor
 import doobie.implicits._
 import cats.effect.IO
 import com.mansoor.rest.crudapi.server.backend.db.dao.{UsageLogDAO, VaultDAO}
+import com.mansoor.rest.crudapi.server.backend.db.dto.VaultDTO
+import com.mansoor.rest.crudapi.server.paths.RegisterVaultUser.complete
 import doobie.util.yolo.Yolo
 
 import scala.concurrent.ExecutionContext
@@ -44,6 +48,13 @@ object Operations {
     usageLogDAO.create().quick.attempt.unsafeRunSync() match {
       case Left(th) => log.error(s"Unable to create table ${usageLogDAO.table}!", th)
       case Right(x) => log.info(s"Table created successfully: ${usageLogDAO.table}!", x)
+    }
+  }
+
+  def registerUser(v: VaultDTO): StandardRoute = {
+    vaultDAO.insert(v).quick.attempt.unsafeRunSync() match {
+      case Left(ex) => complete(HttpResponse(StatusCodes.NotAcceptable, entity = HttpEntity(ex.toString)))
+      case Right(x) => complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(s"User registered successfully with namespace: ${v.namespace}")))
     }
   }
 }

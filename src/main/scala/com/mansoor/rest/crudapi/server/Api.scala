@@ -4,7 +4,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives._
-import com.mansoor.rest.crudapi.server.paths.Base
+import com.mansoor.rest.crudapi.server.paths.{Base, RegisterVaultUser}
 import com.mansoor.rest.crudapi.utils.json.JsonSupport
 import com.mansoor.rest.crudapi.{`X-Requested-By`, appConfig}
 
@@ -20,7 +20,8 @@ object Api extends CORSHandler with JsonSupport {
       headerValueByName(`X-Requested-By`){ reqBy =>
         corsHandler(
           respondWithHeader(RawHeader(`X-Requested-By`, reqBy)) {
-            Base.route
+            Base.route ~
+            RegisterVaultUser.route
           }
         )
       }
