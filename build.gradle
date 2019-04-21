@@ -32,6 +32,7 @@ dependencies {
     compile group: 'com.github.scopt', name: 'scopt_' + scalaBaseVersion, version: scoptVersion
     compile group: 'ch.qos.logback', name: 'logback-classic', version: logbackVersion
     compile group: 'com.typesafe.akka', name: 'akka-http_' + scalaBaseVersion, version: akkaHttpVersion
+    compile group: 'com.typesafe.akka', name: 'akka-http-spray-json_' + scalaBaseVersion, version: akkaHttpVersion
     compile group: 'com.typesafe.akka', name: 'akka-http-testkit_' + scalaBaseVersion, version: akkaHttpVersion
     compile group: 'com.typesafe.akka', name: 'akka-stream_' + scalaBaseVersion, version: akkaStreamVersion
     compile group: 'com.typesafe.akka', name: 'akka-stream-testkit_' + scalaBaseVersion, version: akkaStreamVersion
@@ -40,6 +41,7 @@ dependencies {
     compile group: 'org.typelevel', name: 'cats-core_' + scalaBaseVersion, version: catsVersion
     compile group: 'org.tpolecat', name: 'doobie-core_' + scalaBaseVersion, version: doobieVersion
     compile group: 'org.tpolecat', name: 'doobie-hikari_' + scalaBaseVersion, version: doobieVersion
+    compile group: 'org.tpolecat', name: 'doobie-postgres_' + scalaBaseVersion, version: postgresVersion
 
 
     testCompile group: 'org.scalatest', name: 'scalatest_' + scalaBaseVersion, version: scalaTestVersion
@@ -79,14 +81,9 @@ task runApp(type: JavaExec, group: 'crudapi') {
     }
     classpath = sourceSets.main.runtimeClasspath
     main = mainClassFile
-    jvmArgs = [
-            '-DBACKEND_JDBC_DRIVER=',
-            '-DBACKEND_JDBC_URL=',
-            '-DBACKEND_JDBC_USERNAME=',
-            '-DBACKEND_JDBC_PASSWORD='
-    ]
+    jvmArgs = []
     args = [
             '--port', '8080',
-            '--run'
+            '--start'
     ]
 }
