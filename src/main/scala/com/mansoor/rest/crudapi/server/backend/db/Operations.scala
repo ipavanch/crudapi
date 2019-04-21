@@ -68,18 +68,22 @@ object Operations {
       val clientXA: Transactor[IO] = Connector.get(dbConf)
       val yolo: Yolo[IO] = clientXA.yolo
       import yolo._
-      Future.sequence(sqlJson.rows.map(i => insertRow(sqlJson.schema, sqlJson.table, i).quick.unsafeToFuture()))
+      Future.sequence(sqlJson.rows.map(i => insertRow(sqlJson.schema.trim, sqlJson.table.trim, i).quick.unsafeToFuture()))
     }else {
       Future.failed[List[Unit]](new IllegalArgumentException(s"Namespace $ns not found in ${vaultDAO.table} table!"))
     }
   }
 
-  def updateSql(ns: String, sqlJson: SqlUpdateJson): StandardRoute = {
+  def updateSql(ns: String, sqlJson: SqlUpdateJson): Future[Unit] = {
     val vRec: Option[VaultDTO] = getVaultRec(ns)
     if(vRec.isDefined) {
-      complete(HttpResponse(StatusCodes.OK, entity = sqlJson.toString))
+      val dbConf: DBConfig = transform2DBConf(vRec.get, sqlJson.schema)
+      val clientXA: Transactor[IO] = Connector.get(dbConf)
+      val yolo: Yolo[IO] = clientXA.yolo
+      import yolo._
+      updateRow(sqlJson.schema.trim, sqlJson.table.trim, sqlJson.set, sqlJson.where).quick.unsafeToFuture()
     }else {
-      nsNotFound(ns)
+      Future.failed[Unit](new IllegalArgumentException(s"Namespace $ns not found in ${vaultDAO.table} table!"))
     }
   }
 
@@ -96,6 +100,16 @@ object Operations {
     Fragment.const(
       s"""
        |INSERT INTO $schema.$table (${row.keys.mkString(",")}) VALUES (${row.values.mkString(",")});
+     """.stripMargin
+    ).update
+  }
+
+  private def updateRow(schema: String, table: String, set: Map[String, String], where: String): Update0 = {
+    Fragment.const(
+      s"""
+         |UPDATE $schema.$table
+         |SET ${set.toList.map(i => s"${i._1}=${i._2}").mkString(",")}
+         |WHERE $where;
      """.stripMargin
     ).update
   }
