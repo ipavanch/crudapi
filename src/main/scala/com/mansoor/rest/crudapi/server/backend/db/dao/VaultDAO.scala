@@ -6,9 +6,11 @@ import com.mansoor.rest.crudapi.log
 import com.mansoor.rest.crudapi.server.backend.db.Tables
 import com.mansoor.rest.crudapi.server.backend.db.dto.VaultDTO
 import doobie.util.fragment.Fragment
+import doobie.util.query
 import doobie.util.update.Update0
 
 class VaultDAO extends VaultColumns with CRUD {
+
   override def table: String = Tables.VAULT
 
   override def create(): Update0 = {
@@ -37,9 +39,19 @@ class VaultDAO extends VaultColumns with CRUD {
     val query: String =
       s"""
          |INSERT INTO $table ($namespace, $user, $dbType, $jdbcURL, $jdbcUser, $jdbcPass)
-         |VALUES ('${rec.namespace}', '${rec.user}', '${rec.dbType}', '${rec.jdbcURL}', '${rec.jdbcUser}', '${rec.jdbcPass}');
+         |VALUES ('${rec.namespace.trim}', '${rec.user.trim}', '${rec.dbType.trim}', '${rec.jdbcURL.trim}', '${rec.jdbcUser.trim}', '${rec.jdbcPass.trim}');
        """.stripMargin
 
     Fragment.const(query).update
+  }
+
+  def read(ns: String): query.Query0[VaultDTO] = {
+    Fragment.const(
+      s"""
+         |SELECT $namespace, $user, $dbType, $jdbcURL, $jdbcUser, $jdbcPass
+         |FROM $table
+         |WHERE $namespace = '$ns';
+       """.stripMargin
+    ).query[VaultDTO]
   }
 }
