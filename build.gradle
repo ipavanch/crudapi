@@ -1,0 +1,92 @@
+import java.text.SimpleDateFormat
+import com.github.jengelman.gradle.plugins.shadow.transformers.AppendingTransformer
+
+plugins {
+    id 'idea'
+    id 'scala'
+    id 'maven'
+    id 'com.github.maiflai.scalatest' version '0.25'
+    id 'com.github.johnrengelman.shadow' version '5.0.0'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        scala {
+            srcDirs = ['src/main/scala']
+        }
+    }
+    test {
+        scala {
+            srcDirs = ['src/test/scala']
+        }
+    }
+}
+
+dependencies {
+    compile group: 'org.scala-lang', name: 'scala-library', version: scalaFullVersion
+    compile group: 'com.github.scopt', name: 'scopt_' + scalaBaseVersion, version: scoptVersion
+    compile group: 'ch.qos.logback', name: 'logback-classic', version: logbackVersion
+    compile group: 'com.typesafe.akka', name: 'akka-http_' + scalaBaseVersion, version: akkaHttpVersion
+    compile group: 'com.typesafe.akka', name: 'akka-http-testkit_' + scalaBaseVersion, version: akkaHttpVersion
+    compile group: 'com.typesafe.akka', name: 'akka-stream_' + scalaBaseVersion, version: akkaStreamVersion
+    compile group: 'com.typesafe.akka', name: 'akka-stream-testkit_' + scalaBaseVersion, version: akkaStreamVersion
+    compile group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: javaxWsVersion
+    compile group: 'com.github.swagger-akka-http', name: 'swagger-akka-http_' + scalaBaseVersion, version: swaggerAkkaVersion
+    compile group: 'org.typelevel', name: 'cats-core_' + scalaBaseVersion, version: catsVersion
+    compile group: 'org.tpolecat', name: 'doobie-core_' + scalaBaseVersion, version: doobieVersion
+    compile group: 'org.tpolecat', name: 'doobie-hikari_' + scalaBaseVersion, version: doobieVersion
+
+
+    testCompile group: 'org.scalatest', name: 'scalatest_' + scalaBaseVersion, version: scalaTestVersion
+    testCompile group: 'org.scalacheck', name: 'scalacheck_' + scalaBaseVersion, version: scalaCheckVersion
+    testCompile group: 'org.pegdown', name: 'pegdown', version: pegdownVersion
+    testCompile group: 'org.tpolecat', name: 'doobie-specs2_' + scalaBaseVersion, version: doobieVersion
+    testCompile group: 'org.tpolecat', name: 'doobie-scalatest_' + scalaBaseVersion, version: doobieVersion
+}
+
+jar {
+    manifest {
+        attributes (
+                'Built-By': 'Mansoor Baba Shaik',
+                'Built-Timestamp': new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(new Date()),
+                'Build-Revision': project.version.toString(),
+                'Build-Jdk': "${System.properties['java.version']} (${System.properties['java.vendor']} ${System.properties['java.vm.version']})",
+                'Build-OS': "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}",
+                'Created-By': "Gradle ${gradle.gradleVersion}",
+                'Manifest-Version': project.version,
+                'Main-Class': mainClassFile
+        )
+    }
+}
+
+shadowJar {
+    archiveClassifier = null
+    version = null
+    transform(AppendingTransformer.class) {
+        resource = 'reference.conf'
+    }
+    zip64 = true
+}
+
+task runApp(type: JavaExec, group: 'crudapi') {
+    doFirst {
+        println("#"*10 + "Running the application" + "#"* 25)
+    }
+    classpath = sourceSets.main.runtimeClasspath
+    main = mainClassFile
+    jvmArgs = [
+            '-DBACKEND_JDBC_DRIVER=',
+            '-DBACKEND_JDBC_URL=',
+            '-DBACKEND_JDBC_USERNAME=',
+            '-DBACKEND_JDBC_PASSWORD='
+    ]
+    args = [
+            '--port', '8080',
+            '--run'
+    ]
+}
