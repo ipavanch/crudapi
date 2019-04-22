@@ -14,7 +14,8 @@ import doobie.implicits._
 import cats.effect.IO
 import com.mansoor.rest.crudapi.server.backend.db.dao.{UsageLogDAO, VaultDAO}
 import com.mansoor.rest.crudapi.server.backend.db.dto.{UsageLogDTO, VaultDTO}
-import com.mansoor.rest.crudapi.server.paths.payload.{SqlDeleteJson, SqlInsertJson, SqlUpdateJson}
+import com.mansoor.rest.crudapi.server.paths.payload.{SqlDeleteJson, SqlInsertJson, SqlSelectJson, SqlUpdateJson}
+import doobie.util.query.Query0
 import doobie.util.update.Update0
 import doobie.util.yolo.Yolo
 
@@ -69,6 +70,17 @@ object Operations extends RowOps {
     usageLogDAO.insert(u).quick.attempt.unsafeRunAsyncAndForget()
   }
 
+  def selectSql(ns: String, user: String, sqlJson: SqlSelectJson, limit: Option[Int]): Future[Any] = {
+    val vRec: Option[VaultDTO] = getVaultRec(ns, user)
+    if(vRec.isDefined) {
+      val dbConf: DBConfig = transform2DBConf(vRec.get, sqlJson.schema)
+      val clientXA: Transactor[IO] = Connector.get(dbConf)
+      selectRows(sqlJson.schema.trim, sqlJson.table.trim, sqlJson.cols, sqlJson.where, limit).nel.transact(clientXA).unsafeToFuture()
+    }else {
+      Future.failed[List[Any]](new IllegalArgumentException(s"Namespace $ns and User $user combination not found in ${vaultDAO.table} table!"))
+    }
+  }
+
   def insertSql(ns: String, user: String, sqlJson: SqlInsertJson): Future[List[Unit]] = {
     val vRec: Option[VaultDTO] = getVaultRec(ns, user)
     if(vRec.isDefined) {
@@ -106,6 +118,15 @@ object Operations extends RowOps {
     }else {
       Future.failed[Unit](new IllegalArgumentException(s"Namespace $ns and User $user combination not found in ${vaultDAO.table} table!"))
     }
+  }
+
+  override def selectRows(schema: String, table: String, cols: List[String], where: Option[String], limit: Option[Int]): Query0[String] = {
+    val qb: StringBuilder = new StringBuilder()
+    qb ++= s"SELECT ${cols.mkString(",")} FROM $schema.$table"
+    if(where.isDefined) qb ++= s" WHERE ${where.get}"
+    if(limit.isDefined) qb ++= s" LIMIT ${limit.get}"
+    qb += ';'
+    Fragment.const(qb.mkString).query[String]
   }
 
   override def insertRow(schema: String, table: String, row: Map[String, Any]): Update0 = {

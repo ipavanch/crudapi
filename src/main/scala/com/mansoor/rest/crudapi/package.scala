@@ -42,4 +42,5 @@ package object crudapi {
   var appConfig: AppConfig = _
 
   val `X-Requested-By`: String = "X-Requested-By"
+  val `select`: String = "select"
 }
