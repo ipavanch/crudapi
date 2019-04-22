@@ -13,7 +13,9 @@ case object SwaggerService extends SwaggerHttpService {
     "Function1RequestContextFutureRouteResult",
     "ListString",
     "ListMapStringString",
-    "MapStringString"
+    "MapStringString",
+    "MapStringObject",
+    "ListMapStringObject"
   )
 
   override def apiClasses: Set[Class[_]] = Set(

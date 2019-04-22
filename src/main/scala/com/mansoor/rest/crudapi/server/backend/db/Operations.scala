@@ -7,6 +7,7 @@ import cats.effect.ContextShift
 import com.mansoor.rest.crudapi.utils.config.ConfigLoader.DBConfig
 import com.mansoor.rest.crudapi.utils.db.{Connector, DBType, Driver, RowOps}
 import com.mansoor.rest.crudapi.{appConfig, ec, log}
+import com.mansoor.rest.crudapi.utils.db.convertAnyToSqlType
 import doobie.util.fragment.Fragment
 import doobie.util.transactor.Transactor
 import doobie.implicits._
@@ -107,31 +108,31 @@ object Operations extends RowOps {
     }
   }
 
-  override def insertRow(schema: String, table: String, row: Map[String, String]): Update0 = {
-    Fragment.const(
+  override def insertRow(schema: String, table: String, row: Map[String, Any]): Update0 = {
+    val query: String =
       s"""
-       |INSERT INTO $schema.$table (${row.keys.mkString(",")}) VALUES (${row.values.mkString(",")});
+         |INSERT INTO $schema.$table (${row.keys.mkString(",")}) VALUES (${row.values.map(convertAnyToSqlType).mkString(",")});
      """.stripMargin
-    ).update
+    Fragment.const(query).update
   }
 
-  override def updateRow(schema: String, table: String, set: Map[String, String], where: String): Update0 = {
-    Fragment.const(
+  override def updateRow(schema: String, table: String, set: Map[String, Any], where: String): Update0 = {
+    val query: String =
       s"""
          |UPDATE $schema.$table
-         |SET ${set.toList.map(i => s"${i._1}=${i._2}").mkString(",")}
+         |SET ${set.toList.map(i => s"${i._1}=${convertAnyToSqlType(i._2)}").mkString(",")}
          |WHERE $where;
      """.stripMargin
-    ).update
+    Fragment.const(query).update
   }
 
   override def deleteRow(schema: String, table: String, where: String): Update0 = {
-    Fragment.const(
+    val query: String =
       s"""
          |DELETE FROM $schema.$table
          |WHERE $where;
      """.stripMargin
-    ).update
+    Fragment.const(query).update
   }
 
   private def getVaultRec(ns: String, user: String): Option[VaultDTO] = {
